@@ -15,7 +15,7 @@ glPrimitiveTypes = [
     GL_QUAD_STRIP,
 ]
 
-keyInput = 0
+keyInput = 4
 
 
 def key_callback(window, key, scancode, action, mods):
