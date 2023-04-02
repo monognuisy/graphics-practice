@@ -41,8 +41,11 @@ class Color:
 def hadamard(c1: Color, c2: Color) -> Color:
     return Color.colorfromArray(c1.color * c2.color)
 
-def colorAdd(c1: Color, light: Color, weight: float) -> Color:
+def colorSoftAdd(c1: Color, light: Color, weight: float) -> Color:
     return Color.colorfromArray(c1.color * weight + light.color * (1 - weight))
+
+def colorHardAdd(c1: Color, light: Color, weight) -> Color:
+    return Color.colorfromArray(c1.color + light.color * weight)
 
 class Shader:
     def __init__(self, c):
@@ -51,9 +54,6 @@ class Shader:
 
         self.diffuseColor: Color = Color(*diffuseColor.split()) if diffuseColor else Color(.5,.5,.5)
         self.specularColor: Color = Color(*specularColor.split()) if specularColor else Color(1,1,1)
-
-        # self.diffuseColor = np.array(diffuseColor.split()).astype(np.float) if diffuseColor else np.array([1,1,1]).astype(np.float)
-        # self.specularColor = np.array(specularColor.split()).astype(np.float) if specularColor else np.array([1,1,1]).astype(np.float)
 
         self.shaderType = c.get('type')
         self.shaderName = c.get('name')
@@ -140,11 +140,10 @@ def main():
     pixelWidth = viewWidth / imgSize[0]
     pixelHeight = viewHeight / imgSize[1]
 
-    print(imageX)
-    print(imageY)
-    print(imageZ)
-    print(imageCenter)
-    print(imageOrigin)
+    print('imageX', imageX)
+    print('imageY', imageY)
+    print('imageZ', imageZ)
+    print('imageOrigin', imageOrigin)
 
     # lights init
     for c in root.findall('light'):
@@ -194,11 +193,14 @@ def main():
             pixelColor: Color = whichBall.shader.diffuseColor
             surfaceNormal = normalize(materialPoint - whichBall.center)
             
+            l = normalize(lightOrigin - materialPoint)
+                
+            p = .5
+
+            # add point light
+            pixelColor = colorHardAdd(pixelColor, lightColor, 0.3) * (max(0, np.inner(l, surfaceNormal)) ** p)
 
             if (whichBall.shader.shaderType == 'Lambertian'):
-                l = normalize(lightOrigin - materialPoint)
-                pixelColor = colorAdd(pixelColor, lightColor, 0.7) * (max(0, np.inner(l, surfaceNormal)))
-
                 rayIntersect = False
                 for ball in balls:
                     if rayIntersect:
@@ -214,19 +216,17 @@ def main():
                     pixelColor = Color(0,0,0)
 
             if (whichBall.shader.shaderType == 'Phong'):
-                l = normalize(lightOrigin - materialPoint)
                 v = normalize(viewPoint - materialPoint)
                 h = normalize(v + l)
 
-                p = 2
+                phongP = 50
 
-                pixelColor = colorAdd(pixelColor, lightColor, 0.7) * (max(0, np.inner(surfaceNormal, h))) ** p
+                pixelColor = colorHardAdd(pixelColor, lightColor * (max(0, np.inner(surfaceNormal, h))) ** phongP, 0.7) 
 
             img[imgSize[0] - j - 1][imgSize[1] - i - 1] = pixelColor.toUINT8()
 
 
     rawimg = Image.fromarray(img, 'RGB')
-    # rawimg.save('out.png')
     rawimg.save(sys.argv[1]+'.png')
 
 
