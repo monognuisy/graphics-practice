@@ -51,9 +51,11 @@ class Shader:
     def __init__(self, c):
         diffuseColor = c.findtext('diffuseColor')
         specularColor = c.findtext('specularColor')
+        exponent = c.findtext('exponent')
 
         self.diffuseColor: Color = Color(*diffuseColor.split()) if diffuseColor else Color(.5,.5,.5)
         self.specularColor: Color = Color(*specularColor.split()) if specularColor else Color(1,1,1)
+        self.exponent: float = float(exponent) if exponent else 50.0
 
         self.shaderType = c.get('type')
         self.shaderName = c.get('name')
@@ -219,7 +221,7 @@ def main():
                 v = normalize(viewPoint - materialPoint)
                 h = normalize(v + l)
 
-                phongP = 50
+                phongP = whichBall.shader.exponent
 
                 pixelColor = colorHardAdd(pixelColor, lightColor * (max(0, np.inner(surfaceNormal, h))) ** phongP, 0.7) 
 
