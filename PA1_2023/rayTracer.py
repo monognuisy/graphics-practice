@@ -134,13 +134,15 @@ def main():
         print('viewHeight', viewHeight)
 
     # image init
+    imageX = normalize(np.cross(viewDir, viewUp))
+    imageY = normalize(np.cross(imageX, viewDir))
     imageZ = normalize(viewProjNormal)
-    imageY = normalize(np.cross(viewProjNormal, viewUp))
-    imageX = normalize(np.cross(imageY, imageZ))
     imageCenter = viewPoint - projDistance * imageZ
     imageOrigin = imageCenter - (viewWidth / 2) * imageX - (viewHeight / 2) * imageY
     pixelWidth = viewWidth / imgSize[0]
     pixelHeight = viewHeight / imgSize[1]
+
+    imageOrigin += .5 * pixelWidth * imageX + .5 * pixelHeight * imageY
 
     print('imageX', imageX)
     print('imageY', imageY)
@@ -173,7 +175,7 @@ def main():
 
     for i in np.arange(imgSize[1]):
         for j in np.arange(imgSize[0]):
-            imagePoint = imageOrigin + pixelWidth * (j + .5) * imageX + pixelHeight * (i + .5) * imageY
+            imagePoint = imageOrigin + pixelWidth * j * imageX + pixelHeight * (imgSize[1] - i - 1) * imageY
             d = normalize(imagePoint - viewPoint)
 
             # calculating minimum intersecting point
@@ -182,7 +184,6 @@ def main():
                 intersections.append((checkIntersection(ball, d, viewPoint), index))
 
             t, index = min(intersections)
-
             
             # rendering
             if (t >= math.inf):
@@ -225,7 +226,7 @@ def main():
 
                 pixelColor = colorHardAdd(pixelColor, lightColor * (max(0, np.inner(surfaceNormal, h))) ** phongP, 0.7) 
 
-            img[imgSize[0] - j - 1][imgSize[1] - i - 1] = pixelColor.toUINT8()
+            img[i][j] = pixelColor.toUINT8()
 
 
     rawimg = Image.fromarray(img, 'RGB')
