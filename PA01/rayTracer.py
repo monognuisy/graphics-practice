@@ -224,7 +224,8 @@ def main():
 
                 phongP = whichBall.shader.exponent
 
-                pixelColor = colorHardAdd(pixelColor, lightColor * (max(0, np.inner(surfaceNormal, h))) ** phongP, 0.7) 
+                pixelColor = colorHardAdd(pixelColor, colorSoftAdd(lightColor, whichBall.shader.specularColor, 0.7) 
+                                          * (max(0, np.inner(surfaceNormal, h))) ** phongP, 0.7) 
 
             img[i][j] = pixelColor.toUINT8()
 
