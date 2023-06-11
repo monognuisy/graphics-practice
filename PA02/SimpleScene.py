@@ -10,12 +10,16 @@ import ctypes
 from PIL.Image import open
 import OBJ
 from Ray import *
+import copy
 
 
 # global variables
 wld2cam=[]
 cam2wld=[]
 cow2wld=None
+cows=[
+    None, None, None, None, None, None
+]
 cursorOnCowBoundingBox=False
 pickInfo=None
 floorTexID=0
@@ -30,8 +34,10 @@ camModel=None
 cowModel=None
 H_DRAG=1
 V_DRAG=2
+C_MAX=6
 # dragging state
 isDrag=0
+cowCount=1
 
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
@@ -230,6 +236,11 @@ def display():
 
     drawCow(cow2wld, cursorOnCowBoundingBox);														# Draw cow.
 
+    for i in range(C_MAX):
+        if (cows[i] is None):
+            continue
+        drawCow(cows[i], False);
+
     glFlush();
 
 def reshape(window, w, h):
@@ -314,14 +325,20 @@ def initialize(window):
     cameraIndex = 0;
 
 def onMouseButton(window,button, state, mods):
-    global isDrag, V_DRAG, H_DRAG
+    global isDrag, cowCount, V_DRAG, H_DRAG, cow2wld
     GLFW_DOWN=1;
     GLFW_UP=0;
     x, y=glfw.get_cursor_pos(window)
     if button == glfw.MOUSE_BUTTON_LEFT:
         if state == GLFW_DOWN:
             if isDrag==H_DRAG:
-                isDrag=0
+                # when cow placed six times
+                if (cowCount >= C_MAX):
+                    isDrag=0;
+                    cowCount = 0;
+                else:
+                    cows[cowCount - 1] = cow2wld.copy();
+                    cowCount += 1;
             else:
                 isDrag=V_DRAG;
             print( "Left mouse down-click at %d %d\n" % (x,y))
@@ -343,6 +360,21 @@ def onMouseDrag(window, x, y):
             # TODO:
             # create a dragging plane perpendicular to the ray direction, 
             # and test intersection with the screen ray.
+            if cursorOnCowBoundingBox:
+                ray=screenCoordToRay(window, x, y);
+                pp=pickInfo;
+                p=Plane(np.array((1,0,0)), pp.cowPickPosition);
+
+                c=ray.intersectsPlane(p);
+
+                currentPos=ray.getPoint(c[1])
+                currentPos[0], currentPos[2] = pp.cowPickPosition[0], pp.cowPickPosition[2]
+                
+                T=np.eye(4)
+                setTranslation(T, currentPos-pp.cowPickPosition)
+                cow2wld=T@pp.cowPickConfiguration;
+            
+                # pp.cowPickPosition = currentPos.copy()
             print('vdrag')
 
         else:
