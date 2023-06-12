@@ -332,6 +332,10 @@ def onMouseButton(window,button, state, mods):
     x, y=glfw.get_cursor_pos(window)
     if button == glfw.MOUSE_BUTTON_LEFT:
         if state == GLFW_DOWN:
+            print(isDrag)
+            if isDrag==0:
+                isDrag=H_DRAG;
+            
             isDrag=V_DRAG;
             # if isDrag==H_DRAG:
             #     pass;   
@@ -344,18 +348,20 @@ def onMouseButton(window,button, state, mods):
         elif state == GLFW_UP and isDrag!=0:
             # when cow placed six times
             print((x, y) == curpos)
-            if (x,y) != curpos:
+            if cowCount == 0:
+                isDrag=H_DRAG;
+                cowCount += 1;
+            elif (x,y) != curpos:
                 # v drag happend
                 isDrag=H_DRAG;
-            else:
-                if (cowCount >= C_MAX - 1):
+            elif isDrag!=0:
+                if (cowCount >= C_MAX):
                     isDrag=0;
                     cowCount = 0;
                 else:
-                    cows[cowCount] = cow2wld.copy();
+                    cows[cowCount - 1] = cow2wld.copy();
                     cowCount += 1;
                     isDrag=H_DRAG;
-            isDrag=H_DRAG;
             print( "Left mouse up\n");
             # start horizontal dragging using mouse-move events.
     elif button == glfw.MOUSE_BUTTON_RIGHT:
