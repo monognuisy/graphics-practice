@@ -37,7 +37,8 @@ V_DRAG=2
 C_MAX=6
 # dragging state
 isDrag=0
-cowCount=1
+cowCount=0
+curpos=None
 
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
@@ -325,26 +326,30 @@ def initialize(window):
     cameraIndex = 0;
 
 def onMouseButton(window,button, state, mods):
-    global isDrag, cowCount, V_DRAG, H_DRAG, cow2wld
+    global isDrag, cowCount, V_DRAG, H_DRAG, cow2wld, curpos
     GLFW_DOWN=1;
     GLFW_UP=0;
     x, y=glfw.get_cursor_pos(window)
     if button == glfw.MOUSE_BUTTON_LEFT:
         if state == GLFW_DOWN:
             if isDrag==H_DRAG:
-                # when cow placed six times
-                if (cowCount >= C_MAX):
-                    isDrag=0;
-                    cowCount = 0;
-                else:
-                    cows[cowCount - 1] = cow2wld.copy();
-                    cowCount += 1;
+                pass;   
             else:
                 isDrag=V_DRAG;
             print( "Left mouse down-click at %d %d\n" % (x,y))
             # start vertical dragging
         elif state == GLFW_UP and isDrag!=0:
-            isDrag=H_DRAG;
+            # when cow placed six times
+            if isDrag == H_DRAG:
+                if (cowCount >= C_MAX - 1):
+                    isDrag=0;
+                    cowCount = 0;
+                else:
+                    cows[cowCount] = cow2wld.copy();
+                    cowCount += 1;
+                    isDrag=H_DRAG;
+            else:
+                isDrag=H_DRAG;
             print( "Left mouse up\n");
             # start horizontal dragging using mouse-move events.
     elif button == glfw.MOUSE_BUTTON_RIGHT:
@@ -352,7 +357,7 @@ def onMouseButton(window,button, state, mods):
             print( "Right mouse click at (%d, %d)\n"%(x,y) );
 
 def onMouseDrag(window, x, y):
-    global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld
+    global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld, curpos
     if isDrag: 
         print( "in drag mode %d\n"% isDrag);
         if  isDrag==V_DRAG:
@@ -375,6 +380,10 @@ def onMouseDrag(window, x, y):
                 cow2wld=T@pp.cowPickConfiguration;
             
                 # pp.cowPickPosition = currentPos.copy()
+                cowPickPosition=currentPos;
+                cowPickLocalPos=transform(np.linalg.inv(cow2wld),cowPickPosition)
+
+                pickInfo=PickInfo(c[1], cowPickPosition, cow2wld, cowPickLocalPos )
             print('vdrag')
 
         else:
