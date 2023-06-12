@@ -11,7 +11,7 @@ from PIL.Image import open
 import OBJ
 from Ray import *
 import copy
-
+from math import atan2
 
 # global variables
 wld2cam=[]
@@ -35,10 +35,18 @@ cowModel=None
 H_DRAG=1
 V_DRAG=2
 C_MAX=6
+LOOP_NUM=3
 # dragging state
 isDrag=0
 cowCount=0
 curpos=None
+
+# animation
+timeStart = False
+startTime = 0
+resCow = None
+bspline = None
+
 
 class PickInfo:
     def __init__(self, cursorRayT, cowPickPosition, cowPickConfiguration, cowPickPositionLocal):
@@ -221,7 +229,7 @@ def drawFloor():
     drawFrame(5);				# Draw x, y, and z axis.
 
 def display():
-    global cameraIndex, cow2wld
+    global cameraIndex, cow2wld, cowCount, resCow, timeStart, startTime, isDrag, cows;
     glClearColor(0.8, 0.9, 0.9, 1.0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);				# Clear the screen
     # set viewing transformation.
@@ -235,14 +243,78 @@ def display():
     #animTime=glfw.get_time()-animStartTime;
     #you need to modify both the translation and rotation parts of the cow2wld matrix.
 
-    drawCow(cow2wld, cursorOnCowBoundingBox);														# Draw cow.
+    # default COWS!
+    if cowCount <= C_MAX:
+        drawCow(cow2wld, cursorOnCowBoundingBox);														# Draw cow.
 
-    for i in range(C_MAX):
-        if (cows[i] is None):
-            continue
-        drawCow(cows[i], False);
+        for i in range(C_MAX):
+            if (cows[i] is None):
+                continue
+            drawCow(cows[i], False);
+
+    # start roller-coaster
+    elif cowCount > C_MAX:
+        if not timeStart:
+            resCow = cows[0].copy();
+            timeStart = True;
+            startTime = glfw.get_time();
+        t = glfw.get_time() - startTime;
+    
+        if t < LOOP_NUM*C_MAX :
+            for i in range(C_MAX):
+                if i < t % C_MAX and t % C_MAX < i + 1:
+                    t = t % 1
+                    P0 = cows[(i-1)%C_MAX] 
+                    P1 = cows[i%C_MAX]
+                    P2 = cows[(i+1)%C_MAX]
+                    P3 = cows[(i+2)%C_MAX]
+                    bspline = BSpline(P0, P1, P2, P3, t);
+                    resCow[:3, :3] = getHeadTransform(P0, P1, P2, P3, t);
+                    break;
+        else:   
+            # after rollercoaster
+            timeStart = 0
+            cowCount = 0
+            cow2wld = cows[0].copy() # reset cow position
+            isDrag = 0 # drag initialize
+
+            cows = [None for i in range(C_MAX)];
+            glFlush()
+            return 
+        
+        setTranslation(resCow, getTranslation(bspline));
+        drawCow(resCow, False);
 
     glFlush();
+
+def BSpline(P0, P1, P2, P3, t):
+    P = ((1-t)**3 * P0 + (3*t**3 - 6*t**2 + 4) * P1 + (-3*t**3 + 3*t**2 + 3*t + 1) * P2 + t**3 * P3) / 6;
+    return P;
+
+def getHeadTransform(P0, P1, P2, P3, t):
+    dVector = (-3*(1-t)**3 * P0 + (9*t**2 - 12*t) * P1 + (-9*t**2 + 6*t + 3) * P2 + 3*t**3 * P3) / 6;
+    dVector = getTranslation(dVector);
+    dVector = dVector / np.linalg.norm(dVector);
+
+    # Use XYZ rotation
+    pitch = atan2(dVector[1], (dVector[0]**2 + dVector[2]**2)**.5);
+    yaw = atan2(dVector[2], dVector[0]);
+
+    Rx = np.array([
+        [1., 0., 0.,],
+        [0., np.cos(pitch), -np.sin(pitch)],
+        [0., np.sin(pitch), np.cos(pitch)]
+    ]);
+
+    Ry = np.array([
+        [np.cos(yaw), 0., np.sin(yaw)],
+        [0., 1., 0.,],
+        [-np.sin(yaw), 0., np.cos(yaw)]
+    ]);
+
+    Rz = np.eye(3);
+
+    return (Rz @ Ry @ Rx).T;
 
 def reshape(window, w, h):
     width = w;
@@ -337,11 +409,7 @@ def onMouseButton(window,button, state, mods):
                 isDrag=H_DRAG;
             
             isDrag=V_DRAG;
-            # if isDrag==H_DRAG:
-            #     pass;   
-            #     isDrag=V_DRAG;    
-            # else:
-            #     isDrag=V_DRAG;
+
             curpos = (x,y);
             print( "Left mouse down-click at %d %d\n" % (x,y))
             # start vertical dragging
@@ -355,11 +423,12 @@ def onMouseButton(window,button, state, mods):
                 # v drag happend
                 isDrag=H_DRAG;
             elif isDrag!=0:
-                if (cowCount >= C_MAX):
+                if (cowCount > C_MAX):
                     isDrag=0;
-                    cowCount = 0;
+                    # cowCount = 0;
                 else:
                     cows[cowCount - 1] = cow2wld.copy();
+                    print(cowCount, cow2wld)
                     cowCount += 1;
                     isDrag=H_DRAG;
             print( "Left mouse up\n");
@@ -408,8 +477,8 @@ def onMouseDrag(window, x, y):
                 c=ray.intersectsPlane(p);
 
                 currentPos=ray.getPoint(c[1])
-                print(pp.cowPickPosition, currentPos)
-                print(pp.cowPickConfiguration, cow2wld)
+                # print(pp.cowPickPosition, currentPos)
+                # print(pp.cowPickConfiguration, cow2wld)
 
                 
                 T=np.eye(4)
