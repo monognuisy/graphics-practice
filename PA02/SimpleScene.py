@@ -17,9 +17,6 @@ from math import atan2
 wld2cam=[]
 cam2wld=[]
 cow2wld=None
-cows=[
-    None, None, None, None, None, None
-]
 cursorOnCowBoundingBox=False
 pickInfo=None
 floorTexID=0
@@ -36,13 +33,14 @@ H_DRAG=1
 V_DRAG=2
 C_MAX=6
 LOOP_NUM=3
+cows=[None for i in range(C_MAX)]
 # dragging state
 isDrag=0
 cowCount=0
-curpos=None
+clickPos=None
 
 # animation
-timeStart = False
+isStart = False
 startTime = 0
 resCow = None
 bspline = None
@@ -229,7 +227,7 @@ def drawFloor():
     drawFrame(5);				# Draw x, y, and z axis.
 
 def display():
-    global cameraIndex, cow2wld, cowCount, resCow, timeStart, startTime, isDrag, cows;
+    global cameraIndex, cow2wld, cowCount, resCow, isStart, startTime, isDrag, cows;
     glClearColor(0.8, 0.9, 0.9, 1.0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);				# Clear the screen
     # set viewing transformation.
@@ -243,7 +241,7 @@ def display():
     #animTime=glfw.get_time()-animStartTime;
     #you need to modify both the translation and rotation parts of the cow2wld matrix.
 
-    # default COWS!
+    # default COWS display
     if cowCount <= C_MAX:
         drawCow(cow2wld, cursorOnCowBoundingBox);														# Draw cow.
 
@@ -254,9 +252,9 @@ def display():
 
     # start roller-coaster
     elif cowCount > C_MAX:
-        if not timeStart:
+        if not isStart:
             resCow = cows[0].copy();
-            timeStart = True;
+            isStart = True;
             startTime = glfw.get_time();
         t = glfw.get_time() - startTime;
     
@@ -273,7 +271,7 @@ def display():
                     break;
         else:   
             # after rollercoaster
-            timeStart = 0
+            isStart = 0
             cowCount = 0
             cow2wld = cows[0].copy() # reset cow position
             isDrag = 0 # drag initialize
@@ -398,7 +396,7 @@ def initialize(window):
     cameraIndex = 0;
 
 def onMouseButton(window,button, state, mods):
-    global isDrag, cowCount, V_DRAG, H_DRAG, cow2wld, curpos
+    global isDrag, cowCount, V_DRAG, H_DRAG, cow2wld, clickPos
     GLFW_DOWN=1;
     GLFW_UP=0;
     x, y=glfw.get_cursor_pos(window)
@@ -410,16 +408,16 @@ def onMouseButton(window,button, state, mods):
             
             isDrag=V_DRAG;
 
-            curpos = (x,y);
+            clickPos = (x,y);
             print( "Left mouse down-click at %d %d\n" % (x,y))
             # start vertical dragging
         elif state == GLFW_UP and isDrag!=0:
             # when cow placed six times
-            print((x, y) == curpos)
+            print((x, y) == clickPos)
             if cowCount == 0:
                 isDrag=H_DRAG;
                 cowCount += 1;
-            elif (x,y) != curpos:
+            elif (x,y) != clickPos:
                 # v drag happend
                 isDrag=H_DRAG;
             elif isDrag!=0:
@@ -438,7 +436,7 @@ def onMouseButton(window,button, state, mods):
             print( "Right mouse click at (%d, %d)\n"%(x,y) );
 
 def onMouseDrag(window, x, y):
-    global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld, curpos
+    global isDrag,cursorOnCowBoundingBox, pickInfo, cow2wld, clickPos
     if isDrag: 
         print( "in drag mode %d\n"% isDrag);
         if  isDrag==V_DRAG:
