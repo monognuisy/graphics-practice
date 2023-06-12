@@ -332,15 +332,22 @@ def onMouseButton(window,button, state, mods):
     x, y=glfw.get_cursor_pos(window)
     if button == glfw.MOUSE_BUTTON_LEFT:
         if state == GLFW_DOWN:
-            if isDrag==H_DRAG:
-                pass;   
-            else:
-                isDrag=V_DRAG;
+            isDrag=V_DRAG;
+            # if isDrag==H_DRAG:
+            #     pass;   
+            #     isDrag=V_DRAG;    
+            # else:
+            #     isDrag=V_DRAG;
+            curpos = (x,y);
             print( "Left mouse down-click at %d %d\n" % (x,y))
             # start vertical dragging
         elif state == GLFW_UP and isDrag!=0:
             # when cow placed six times
-            if isDrag == H_DRAG:
+            print((x, y) == curpos)
+            if (x,y) != curpos:
+                # v drag happend
+                isDrag=H_DRAG;
+            else:
                 if (cowCount >= C_MAX - 1):
                     isDrag=0;
                     cowCount = 0;
@@ -348,8 +355,7 @@ def onMouseButton(window,button, state, mods):
                     cows[cowCount] = cow2wld.copy();
                     cowCount += 1;
                     isDrag=H_DRAG;
-            else:
-                isDrag=H_DRAG;
+            isDrag=H_DRAG;
             print( "Left mouse up\n");
             # start horizontal dragging using mouse-move events.
     elif button == glfw.MOUSE_BUTTON_RIGHT:
@@ -403,6 +409,11 @@ def onMouseDrag(window, x, y):
                 T=np.eye(4)
                 setTranslation(T, currentPos-pp.cowPickPosition)
                 cow2wld=T@pp.cowPickConfiguration;
+                cowPickPosition=currentPos;
+                cowPickLocalPos=transform(np.linalg.inv(cow2wld),cowPickPosition)
+
+                pickInfo=PickInfo(c[1], cowPickPosition, cow2wld, cowPickLocalPos )   
+
     else:
         ray=screenCoordToRay(window, x, y)
 
